@@ -433,24 +433,30 @@ function navigateTo(section) {
     const activeNav = document.querySelector(`.nav-link[data-section="${section}"]`);
     if (activeNav) activeNav.classList.add('active');
 
-    // Handle Admin Section Special Routing
-    if (section === 'admin') {
-        const targetId = App.isLoggedIn ? 'adminDashboard' : 'adminLogin';
-        const modalTarget = document.getElementById(targetId);
-        if (modalTarget) modalTarget.classList.add('active', 'fade-in');
+    // Show target
+    const targetId = 'section' + section.charAt(0).toUpperCase() + section.slice(1);
+    const target = document.getElementById(targetId);
+    if (!target) {
+        // Try alternate id patterns
+        const altMap = { hero: 'sectionHero', cs: 'sectionCS', video: 'sectionVideo', admin: 'sectionAdmin' };
+        const altTarget = document.getElementById(altMap[section]);
+        if (altTarget) {
+            altTarget.classList.add('active', 'fade-in');
+        }
     } else {
-        // Show target
-        const targetId = 'section' + section.charAt(0).toUpperCase() + section.slice(1);
-        const target = document.getElementById(targetId);
-        if (!target) {
-            // Try alternate id patterns
-            const altMap = { hero: 'sectionHero', cs: 'sectionCS', video: 'sectionVideo' };
-            const altTarget = document.getElementById(altMap[section]);
-            if (altTarget) {
-                altTarget.classList.add('active', 'fade-in');
-            }
+        target.classList.add('active', 'fade-in');
+    }
+
+    // Handle Admin Section Special Routing Display
+    if (section === 'admin') {
+        const loginView = document.getElementById('adminLogin');
+        const dashView = document.getElementById('adminDashboard');
+        if (App.isLoggedIn) {
+            if (loginView) loginView.style.display = 'none';
+            if (dashView) dashView.style.display = 'block';
         } else {
-            target.classList.add('active', 'fade-in');
+            if (loginView) loginView.style.display = 'flex';
+            if (dashView) dashView.style.display = 'none';
         }
     }
 
