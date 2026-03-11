@@ -334,6 +334,16 @@
                             <label class="form-label">Açıklama</label>
                             <textarea id="editVideoDesc" class="form-input form-textarea" rows="3"></textarea>
                         </div>
+                        <div class="form-group">
+                            <label class="form-label">Video URL (Google Drive vb.)</label>
+                            <input type="url" id="editVideoUrlDrive" class="form-input"
+                                placeholder="https://drive.google.com/file/d/...">
+                        </div>
+                        <div class="form-group" style="margin-top: 10px;">
+                            <label class="form-label">Video URL (YouTube/Vimeo vb.)</label>
+                            <input type="url" id="editVideoUrlYoutube" class="form-input"
+                                placeholder="https://www.youtube.com/watch?v=...">
+                        </div>
                         <div class="setup-actions" style="margin-top:20px;">
                             <button type="button" class="btn btn-outline" id="cancelEditVideoBtn">İptal</button>
                             <button type="submit" class="btn btn-primary" id="saveEditVideoBtn">Kaydet</button>
@@ -468,14 +478,27 @@
                             </div>
                             <div class="form-row">
                                 <div class="form-group flex-1">
-                                    <label class="form-label">Video Dosyası (Yerel)</label>
+                                    <label class="form-label">Video Dosyası (Yerel - URL girerseniz zorunlu
+                                        değil)</label>
                                     <input type="file" id="videoFile" class="form-input"
-                                        accept="video/mp4,video/x-m4v,video/*" required>
+                                        accept="video/mp4,video/x-m4v,video/*">
                                 </div>
                                 <div class="form-group flex-1">
                                     <label class="form-label">Video Kapak Görseli (İsteğe Bağlı)</label>
                                     <input type="file" id="videoThumbnail" class="form-input"
                                         accept="image/jpeg,image/png,image/webp">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group flex-1">
+                                    <label class="form-label">Video URL (Google Drive vb. - İsteğe Bağlı)</label>
+                                    <input type="url" id="videoUrlDrive" class="form-input"
+                                        placeholder="https://drive.google.com/file/d/...">
+                                </div>
+                                <div class="form-group flex-1">
+                                    <label class="form-label">Video URL (YouTube/Vimeo vb. - İsteğe Bağlı)</label>
+                                    <input type="url" id="videoUrlYoutube" class="form-input"
+                                        placeholder="https://www.youtube.com/watch?v=...">
                                 </div>
                             </div>
                             <div class="form-row">

@@ -686,15 +686,34 @@ function renderCategoryVideos(categoryId) {
                  onclick="openVideoModal('${video.id}')">
                 <div class="video-thumbnail">
                     <img src="${thumbnail}" style="object-fit: cover; width: 100%; height: 100%; display: block;" alt="${video.title}" onerror="this.style.display='none'">
+                    ${video.urlDrive ? '<div class="video-url-badge" style="position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.7); color:white; padding:4px 8px; border-radius:4px; font-size:12px; z-index:2;">Drive</div>' : ''}
+                    ${video.urlYoutube ? `<div class="video-url-badge" style="position:absolute; top:8px; ${video.urlDrive ? 'right:55px;' : 'right:8px;'} background:rgba(255,0,0,0.7); color:white; padding:4px 8px; border-radius:4px; font-size:12px; z-index:2;">YouTube</div>` : ''}
+                    ${(!video.urlDrive && !video.urlYoutube && video.url) ? '<div class="video-url-badge" style="position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.7); color:white; padding:4px 8px; border-radius:4px; font-size:12px; z-index:2;">URL</div>' : ''}
                     <div class="video-play-overlay">
                         <div class="play-icon">
                             <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
                         </div>
                     </div>
                 </div>
-                <div class="video-info">
-                    <h4 class="video-title">${video.title}</h4>
-                    <p class="video-desc">${video.description || ''}</p>
+                <div class="video-info" style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <div>
+                        <h4 class="video-title">${video.title}</h4>
+                        <p class="video-desc">${video.description || ''}</p>
+                    </div>
+                    <div class="project-links" style="margin-top:2px;">
+                        ${video.urlDrive ? `
+                        <a href="${video.urlDrive}" class="project-link" title="Drive'da Aç" target="_blank" onclick="event.stopPropagation();">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/></svg>
+                        </a>` : ''}
+                        ${video.urlYoutube ? `
+                        <a href="${video.urlYoutube}" class="project-link" title="YouTube'da Aç" target="_blank" onclick="event.stopPropagation();">
+                            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                        </a>` : ''}
+                        ${(!video.urlDrive && !video.urlYoutube && video.url) ? `
+                        <a href="${video.url}" class="project-link" title="Dışarıda Aç" target="_blank" onclick="event.stopPropagation();">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/></svg>
+                        </a>` : ''}
+                    </div>
                 </div>
             </div>
         `;
@@ -716,11 +735,31 @@ async function openVideoModal(videoId) {
     document.body.style.overflow = 'hidden';
 
     try {
-        const objectUrl = await VideoDB.getVideoBlobUrl(videoId);
-        if (objectUrl) {
-            container.innerHTML = `<video src="${objectUrl}" controls autoplay style="width:100%; height:100%; max-height: 90vh; object-fit: contain; border-radius: var(--radius-lg); background: transparent;"></video>`;
+        const bestUrl = video.urlDrive || video.urlYoutube || video.url;
+        if (bestUrl) {
+            const embedUrl = getEmbedUrl(bestUrl);
+            if (embedUrl) {
+                // To fix YouTube Error 153 in some local or custom setups, it is usually 
+                // due to the domain origin. Using youtube-nocookie.com often bypasses strict auth restrictions.
+                let safeUrl = embedUrl.replace('youtube.com', 'youtube-nocookie.com');
+
+                // For Google Drive specifically, keeping the iframe as standard as possible
+                // avoids third-party frame conflicts that stall the video buffering.
+                if (safeUrl.includes('drive.google.com')) {
+                    container.innerHTML = `<iframe src="${safeUrl}" width="100%" height="100%" frameborder="0" allow="autoplay; fullscreen" allowfullscreen style="max-height: 90vh; border-radius: var(--radius-lg); background: #000;"></iframe>`;
+                } else {
+                    container.innerHTML = `<iframe src="${safeUrl}" title="${video.title || 'Video Player'}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="width:100%; height:100%; max-height: 90vh; border-radius: var(--radius-lg); border: none; background: #000;"></iframe>`;
+                }
+            } else {
+                container.innerHTML = `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:white;">Geçersiz video linki: ${bestUrl}</div>`;
+            }
         } else {
-            container.innerHTML = `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:white;">Video dosyası aygıtta bulunamadı. Silinmiş olabilir.</div>`;
+            const objectUrl = await VideoDB.getVideoBlobUrl(videoId);
+            if (objectUrl) {
+                container.innerHTML = `<video src="${objectUrl}" controls autoplay style="width:100%; height:100%; max-height: 90vh; object-fit: contain; border-radius: var(--radius-lg); background: transparent;"></video>`;
+            } else {
+                container.innerHTML = `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:white;">Video dosyası aygıtta bulunamadı. Silinmiş olabilir.</div>`;
+            }
         }
     } catch (err) {
         console.error(err);
@@ -752,8 +791,13 @@ document.addEventListener('keydown', (e) => {
 function getEmbedUrl(url) {
     if (!url) return null;
 
+    // Google Drive
+    // Matches links like: https://drive.google.com/file/d/1vXYZ123ABC/view
+    let match = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+    if (match) return `https://drive.google.com/file/d/${match[1]}/preview`;
+
     // YouTube
-    let match = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+    match = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
     if (match) return `https://www.youtube.com/embed/${match[1]}`;
 
     // Vimeo
@@ -761,7 +805,7 @@ function getEmbedUrl(url) {
     if (match) return `https://player.vimeo.com/video/${match[1]}`;
 
     // Direct embed (already an embed URL)
-    if (url.includes('embed')) return url;
+    if (url.includes('embed') || url.includes('preview')) return url;
 
     return null;
 }
@@ -896,12 +940,18 @@ function initAdmin() {
         const thumbInput = document.getElementById('videoThumbnail');
         const thumbFile = thumbInput && thumbInput.files ? thumbInput.files[0] : null;
 
+        const urlDriveInput = document.getElementById('videoUrlDrive');
+        const videoUrlDrive = urlDriveInput ? urlDriveInput.value.trim() : '';
+
+        const urlYoutubeInput = document.getElementById('videoUrlYoutube');
+        const videoUrlYoutube = urlYoutubeInput ? urlYoutubeInput.value.trim() : '';
+
         if (!categoryId) return showToast('⚠️', 'Bir kategori seçin!');
         if (!title) return showToast('⚠️', 'Video başlığı gerekli!');
-        if (!file) return showToast('⚠️', 'Video dosyası seçmelisiniz!');
+        if (!file && !videoUrlDrive && !videoUrlYoutube) return showToast('⚠️', 'Dosya veya URL eklemelisiniz!');
 
         // Check size (optional, prevent massive blocks freezing the browser completely, e.g. 500MB)
-        if (file.size > 500 * 1024 * 1024) {
+        if (file && file.size > 500 * 1024 * 1024) {
             return showToast('⚠️', 'Dosya çok büyük (Maks 500MB)!');
         }
 
@@ -911,8 +961,15 @@ function initAdmin() {
         const saveVideoData = async (thumbDataURL) => {
             try {
                 const videoId = generateId();
-                // Save blob to indexedDB
-                await VideoDB.saveVideoBlob(videoId, file);
+                if (file) {
+                    // Save blob to indexedDB
+                    await VideoDB.saveVideoBlob(videoId, file);
+                }
+
+                // If no custom thumbnail but a youtube link is provided, fetch it
+                if (!thumbDataURL && videoUrlYoutube) {
+                    thumbDataURL = getYouTubeThumbnail(videoUrlYoutube) || '';
+                }
 
                 const videos = getVideos();
                 videos.push({
@@ -921,6 +978,8 @@ function initAdmin() {
                     title,
                     description: desc,
                     thumbnail: thumbDataURL || '',
+                    urlDrive: videoUrlDrive || '',
+                    urlYoutube: videoUrlYoutube || '',
                     createdAt: Date.now()
                 });
                 await setVideos(videos);
@@ -929,10 +988,12 @@ function initAdmin() {
                 document.getElementById('videoDesc').value = '';
                 fileInput.value = '';
                 if (thumbInput) thumbInput.value = '';
+                if (urlDriveInput) urlDriveInput.value = '';
+                if (urlYoutubeInput) urlYoutubeInput.value = '';
 
                 refreshAdminData();
                 updateHeroStats();
-                showToast('✅', `"${title}" videosu yerel hafızaya eklendi!`);
+                showToast('✅', `"${title}" videosu eklendi!`);
             } catch (err) {
                 console.error(err);
                 showToast('❌', 'Video kaydedilirken hata oluştu!');
@@ -1122,10 +1183,10 @@ function refreshAdminData() {
             return `
                 <div class="admin-list-item">
                     <div class="admin-item-info">
-                        <span class="admin-item-icon">🎥</span>
+                        <span class="admin-item-icon">${vid.url ? '🔗' : '🎥'}</span>
                         <div class="admin-item-details">
                             <h4>${vid.title}</h4>
-                            <p>${cat ? cat.name : 'Kategori silinmiş'} • Yerel Video (${vid.id})</p>
+                            <p>${cat ? cat.name : 'Kategori silinmiş'} • ${vid.url ? 'URL Video' : 'Yerel Video'}</p>
                         </div>
                     </div>
                     <div class="admin-item-actions">
@@ -1283,6 +1344,17 @@ window.editVideo = function (id) {
     document.getElementById('editVideoId').value = video.id;
     document.getElementById('editVideoTitle').value = video.title;
     document.getElementById('editVideoDesc').value = video.description || '';
+    if (document.getElementById('editVideoUrlDrive')) document.getElementById('editVideoUrlDrive').value = video.urlDrive || '';
+    if (document.getElementById('editVideoUrlYoutube')) document.getElementById('editVideoUrlYoutube').value = video.urlYoutube || '';
+
+    // If migrating an older video that used just "url", fallback to put it in Drive or Youtube appropriately
+    if (video.url) {
+        if (video.url.includes('drive.google.com') && document.getElementById('editVideoUrlDrive') && !document.getElementById('editVideoUrlDrive').value) {
+            document.getElementById('editVideoUrlDrive').value = video.url;
+        } else if (document.getElementById('editVideoUrlYoutube') && !document.getElementById('editVideoUrlYoutube').value) {
+            document.getElementById('editVideoUrlYoutube').value = video.url;
+        }
+    }
 
     modal.classList.add('show');
 }
@@ -1297,6 +1369,11 @@ document.getElementById('editVideoForm').addEventListener('submit', async (e) =>
     const categoryId = document.getElementById('editVideoCategory').value;
     const title = document.getElementById('editVideoTitle').value.trim();
     const desc = document.getElementById('editVideoDesc').value.trim();
+    const urlDriveEl = document.getElementById('editVideoUrlDrive');
+    const urlDrive = urlDriveEl ? urlDriveEl.value.trim() : '';
+
+    const urlYoutubeEl = document.getElementById('editVideoUrlYoutube');
+    const urlYoutube = urlYoutubeEl ? urlYoutubeEl.value.trim() : '';
 
     if (!categoryId || !title) return showToast('⚠️', 'Gerekli alanları doldurun!');
 
@@ -1306,6 +1383,14 @@ document.getElementById('editVideoForm').addEventListener('submit', async (e) =>
         videos[index].categoryId = categoryId;
         videos[index].title = title;
         videos[index].description = desc;
+        videos[index].urlDrive = urlDrive;
+        videos[index].urlYoutube = urlYoutube;
+
+        // If there's no thumbnail but URL exists, try to get youtube thumb
+        if (!videos[index].thumbnail && urlYoutube) {
+            videos[index].thumbnail = getYouTubeThumbnail(urlYoutube) || '';
+        }
+
         await setVideos(videos);
         refreshAdminData();
         renderVideoCategories(); // auto update actual video grid
